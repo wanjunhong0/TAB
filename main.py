@@ -39,6 +39,8 @@ Loading data
 data = Data(path=args.data_path, dataset=args.dataset)
 print('Loaded {0} dataset with {1} nodes and {2} edges'.format(args.dataset, data.n_node, data.n_edge))
 feature = data.feature.to(device)
+feature_cov = data.feature_cov.to(device)
+adj = data.adj.to(device)
 norm_adj = data.norm_adj.to(device)
 label = data.label.to(device)
 
@@ -58,7 +60,7 @@ for epoch in range(1, args.epoch+1):
     # Training
     model.train()
     optimizer.zero_grad()
-    output = model(feature, norm_adj)[data.idx_train]
+    output = model(feature, feature_cov, adj, norm_adj)[data.idx_train]
     loss_train = F.nll_loss(output, label[data.idx_train])
     acc_train = metric(output.max(1)[1], label[data.idx_train])
     loss_train.backward()
@@ -66,7 +68,7 @@ for epoch in range(1, args.epoch+1):
 
     # Validation
     model.eval()
-    output = model(feature, norm_adj)[data.idx_val]
+    output = model(feature, feature_cov, adj, norm_adj)[data.idx_val]
     loss_val = F.nll_loss(output, label[data.idx_val])
     acc_val = metric(output.max(1)[1], label[data.idx_val])
 
@@ -79,7 +81,7 @@ Testing
 ===========================================================================
 """
 model.eval()
-output = model(feature, norm_adj)[data.idx_test]
+output = model(feature, feature_cov, adj, norm_adj)[data.idx_test]
 loss_test = F.nll_loss(output, label[data.idx_test])
 acc_test = metric(output.max(1)[1], label[data.idx_test])
 print('======================Testing======================')

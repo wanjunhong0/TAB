@@ -3,7 +3,7 @@ import networkx as nx
 import json
 import torch
 from torch_geometric.utils import from_networkx
-from utils import normalize_adj, sparse_diag
+from utils import normalize_adj, sparse_diag, covariance_transform
 
 
 class Data():
@@ -18,6 +18,8 @@ class Data():
         
         self.feature = torch.tensor(pd.read_csv(path + dataset + '/X.csv').values, dtype=torch.float).nan_to_num()
         self.n_feature = self.feature.shape[1]
+        self.feature_cov = covariance_transform(self.feature)
+        
         self.label = torch.tensor(pd.read_csv(path + dataset + '/y.csv').values, dtype=torch.int64).squeeze(1)
         self.n_class = len(self.label.unique())
 

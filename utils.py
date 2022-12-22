@@ -1,7 +1,7 @@
 import torch
 
 
-def normalize_adj(adj, symmetric):
+def normalize_adj(adj, symmetric=True):
     """Convert adjacency matrix into normalized laplacian matrix
     Args:
         adj (torch sparse tensor): adjacency matrix
@@ -9,7 +9,7 @@ def normalize_adj(adj, symmetric):
     Returns:
         (torch sparse tensor): Normalized laplacian matrix
     """
-    degree = torch.sparse.sum(adj, dim=1)
+    degree = torch.sparse.sum(adj, dim=0)
     if symmetric:
         degree_ = sparse_diag(degree.pow(-0.5))
         norm_adj = torch.sparse.mm(torch.sparse.mm(degree_, adj), degree_)
@@ -33,3 +33,15 @@ def sparse_diag(vector):
     index = torch.stack([vector._indices()[0], vector._indices()[0]])
 
     return torch.sparse_coo_tensor(index, vector._values(), [n, n])
+
+
+def covariance_transform(x):
+    n = x.shape[0]
+    x_bar = x.mean(dim=0)
+    covs = []
+    for i in range(n):
+        x_ = (x[i] - x_bar).reshape(-1, 1)
+        covs.append(torch.mm(x_, x_.T) * (1 / (n - 1)))
+    covs = torch.stack(covs, dim=0).reshape(n, -1)     # n * d * d --> n * d^2
+
+    return covs

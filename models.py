@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
-from layers import Propagation, MLP
+from layers import Propagation, MLP, ClusteringLayer
+from utils import covariance_transform
 
 
 
@@ -20,11 +21,12 @@ class GraphCAD(torch.nn.Module):
         self.dropout = dropout
         self.prop = Propagation(alpha=0.)
 
-        self.mlp = MLP(3, n_feature, n_hidden, n_class, dropout=[0., 0., 0.], activation=torch.nn.PReLU())
         self.bn0 = torch.nn.BatchNorm1d(n_feature)
+        self.cluster = ClusteringLayer(n_feature, n_hidden, n_class)
+        self.mlp = MLP(3, n_feature, n_hidden, n_class, dropout=[0., 0., 0.], activation=torch.nn.PReLU())
 
 
-    def forward(self, feature, adj):
+    def forward(self, x, x_cov, adj, norm_adj):
         """
         Args:
             feature (torch Tensor): feature input
@@ -34,9 +36,12 @@ class GraphCAD(torch.nn.Module):
             (torch Tensor): log probability for each class in label
 
         """
-        x = feature = self.bn0(feature)
+        x = x0 = self.bn0(x)
+
+        _, _, mask = self.cluster(x_cov, adj)
+
         for i in range(self.n_layer):
-            x = self.prop(x, adj, feature)
+            x = self.prop(x, norm_adj, x0)
 
         x = self.mlp(x)
 

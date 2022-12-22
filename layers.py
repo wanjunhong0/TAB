@@ -42,14 +42,30 @@ class ClusteringLayer(torch.nn.Module):
     def __init__(self, n_feature, n_hidden, n_cluster):
         super(ClusteringLayer, self).__init__()
 
+        self.n_feature = n_feature
+        self.n_cluster = n_cluster
         self.mlp = MLP(2, n_feature, n_hidden, n_cluster, bn=True, activation=torch.nn.ReLU(), dropout=[0., 0., 0.])
+        self.sparsemax = Sparsemax(dim=0)
 
-    def forward(self, x):
+    def correlation_readout(self, x_cov):
+        n = x_cov.shape[0]
+        x_cov = x_cov.reshape(n, self.n_feature, self.n_feature)
+        corrs = []
+        for i in range(n):
+            cov = x_cov[i]
+            var = torch.diag(cov.diag().pow(-0.5))
+            corr = torch.mm(torch.mm(var, cov), var)
+            corrs.append(corr.sum(0))
+        x_corr = torch.stack(corrs, dim=0)
 
-        mask = Sparsemax(self.mlp(x), dim=1)
+        return x_corr
 
+    def forward(self, x_cov, mask):
+        x_cov = torch.sparse.mm(mask, x_cov)
+        x_corr = self.correlation_readout(x_cov)
+        mask = self.sparsemax(self.mlp(x_corr))
 
-        return mask
+        return x_cov, x_corr, mask
 
 
 
