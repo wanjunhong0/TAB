@@ -40,7 +40,7 @@ def covariance_transform(x):
     x_bar = x.mean(dim=0)
     covs = []
     for i in range(n):
-        x_ = (x[i] - x_bar).reshape(-1, 1)
+        x_ = (x[i] - x_bar).reshape(-1, 1).abs()
         covs.append(torch.mm(x_, x_.T) * (1 / (n - 1)))
     covs = torch.stack(covs, dim=0).reshape(n, -1)     # n * d * d --> n * d^2
 

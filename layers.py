@@ -49,14 +49,23 @@ class ClusteringLayer(torch.nn.Module):
 
     def correlation_readout(self, x_cov):
         n = x_cov.shape[0]
-        x_cov = x_cov.reshape(n, self.n_feature, self.n_feature)
-        corrs = []
-        for i in range(n):
-            cov = x_cov[i]
-            var = torch.diag(cov.diag().pow(-0.5))
-            corr = torch.mm(torch.mm(var, cov), var)
-            corrs.append(corr.sum(0))
-        x_corr = torch.stack(corrs, dim=0)
+        diag_idx = torch.arange(self.n_feature * self.n_feature).reshape(self.n_feature, -1).diag()
+        var = x_cov[:, diag_idx].pow(-0.5)
+        # var = torch.bmm(var.reshape(n, self.n_feature, 1), var.reshape(n, 1, self.n_feature)).reshape(n, -1)
+        var = torch.mul(torch.cat([var for _ in range(self.n_feature)], dim=1), var.repeat_interleave(self.n_feature, 1))
+        corr = torch.mul(var, x_cov)
+        x_corr = corr.reshape(n, self.n_feature, -1).sum(1)
+
+
+        ##### too slow  ######
+        # x_cov = x_cov.reshape(n, self.n_feature, self.n_feature)
+        # corrs = []
+        # for i in range(n):
+        #     cov = x_cov[i]
+        #     var = torch.diag(cov.diag().pow(-0.5))
+        #     corr = torch.mm(torch.mm(var, cov), var)
+        #     corrs.append(corr.sum(0))
+        # x_corr = torch.stack(corrs, dim=0)
 
         return x_corr
 
