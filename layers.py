@@ -56,7 +56,6 @@ class ClusteringLayer(torch.nn.Module):
         corr = torch.mul(var, x_cov)
         x_corr = corr.reshape(n, self.n_feature, -1).sum(1)
 
-
         ##### too slow  ######
         # x_cov = x_cov.reshape(n, self.n_feature, self.n_feature)
         # corrs = []
@@ -70,7 +69,7 @@ class ClusteringLayer(torch.nn.Module):
         return x_corr
 
     def forward(self, x_cov, mask):
-        x_cov = torch.sparse.mm(mask, x_cov)
+        x_cov = torch.sparse.mm(mask.transpose(0, 1), x_cov)
         x_corr = self.correlation_readout(x_cov)
         mask = self.sparsemax(self.mlp(x_corr))
 
