@@ -54,7 +54,7 @@ class ClusteringLayer(torch.nn.Module):
         # var = torch.bmm(var.reshape(n, self.n_feature, 1), var.reshape(n, 1, self.n_feature)).reshape(n, -1)
         var = torch.mul(torch.cat([var for _ in range(self.n_feature)], dim=1), var.repeat_interleave(self.n_feature, 1))
         corr = torch.mul(var, x_cov)
-        x_corr = corr.reshape(n, self.n_feature, -1).sum(1)
+        x_corr = corr.reshape(n, self.n_feature, -1).sum(1) / self.n_feature
 
         ##### too slow  ######
         # x_cov = x_cov.reshape(n, self.n_feature, self.n_feature)
@@ -71,9 +71,10 @@ class ClusteringLayer(torch.nn.Module):
     def forward(self, x_cov, mask):
         x_cov = torch.sparse.mm(mask.transpose(0, 1), x_cov)
         x_corr = self.correlation_readout(x_cov)
-        mask = self.sparsemax(self.mlp(x_corr))
+        # mask = self.sparsemax(self.mlp(x_corr))
+        mask = F.gumbel_softmax(self.mlp(x_corr), hard=True, dim=1) 
 
-        return x_cov, x_corr, mask
+        return x_cov, x_corr, mask.to_sparse()
 
 
 

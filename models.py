@@ -17,7 +17,7 @@ class GraphCAD(torch.nn.Module):
 
         self.k = args.k
         self.n_pool = args.n_pool
-        node_pool = round(pow(n_sample, 1 / (self.n_pool + 1)))
+        node_pool = round(pow(n_sample, 1 / (self.n_pool)))
         self.dropout = args.dropout
         self.prop = Propagation(alpha=0.)
 
@@ -52,6 +52,14 @@ class GraphCAD(torch.nn.Module):
             x_cov, corr, mask = self.pools[i](x_cov, mask)
             corrs.append(corr)
             masks.append(mask)
+
+        corrs.append(torch.corrcoef(x.T).sum(1) / 6)
+        
+        # Allocation
+        # gains = []
+        # for i in reversed(range(self.n_pool)):
+        #     gain = 
+
 
 
 
