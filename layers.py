@@ -54,7 +54,7 @@ class ClusteringLayer(torch.nn.Module):
         # var = torch.bmm(var.reshape(n, self.n_feature, 1), var.reshape(n, 1, self.n_feature)).reshape(n, -1)
         var = torch.mul(torch.cat([var for _ in range(self.n_feature)], dim=1), var.repeat_interleave(self.n_feature, 1))
         corr = torch.mul(var, x_cov)
-        x_corr = corr.reshape(n, self.n_feature, -1).sum(1) / self.n_feature
+        x_corr = corr.reshape(n, self.n_feature, -1).sum(1)
 
         ##### too slow  ######
         # x_cov = x_cov.reshape(n, self.n_feature, self.n_feature)

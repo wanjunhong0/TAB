@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from layers import Propagation, MLP, ClusteringLayer
+from utils import normalize_adj
 
 
 class GraphCAD(torch.nn.Module):
@@ -15,6 +16,7 @@ class GraphCAD(torch.nn.Module):
         """
         super(GraphCAD, self).__init__()
 
+        self.n_feature = n_feature
         self.k = args.k
         self.n_pool = args.n_pool
         node_pool = round(pow(n_sample, 1 / (self.n_pool)))
@@ -53,12 +55,19 @@ class GraphCAD(torch.nn.Module):
             corrs.append(corr)
             masks.append(mask)
 
-        corrs.append(torch.corrcoef(x.T).sum(1) / 6)
+        masks.append(torch.ones(1, 1).to_sparse())
+        corrs.append(torch.corrcoef(x.T).sum(1))
         
         # Allocation
-        # gains = []
-        # for i in reversed(range(self.n_pool)):
-        #     gain = 
+        gains = []
+        m_adjs = []
+        for i in reversed(range(self.n_pool)):
+            gain = corrs[i+1] - torch.sparse.mm(normalize_adj(masks[i], symmetric=False).transpose(0, 1), corrs[i])
+            gain = F.sigmoid(gain)
+            gains.append(gain)
+            mask = torch.sparse.mm(masks[i], masks[i+1])
+            for j in range(self.n_feature):
+                split = 
 
 
 

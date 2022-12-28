@@ -21,7 +21,7 @@ parser.add_argument('--epoch', type=int, default=1000, help='Number of epochs to
 parser.add_argument('--lr', type=float, default=0.01, help='Initial learning rate')
 parser.add_argument('--weight_decay', type=float, default=0, help='Weight decay (L2 norm on parameters)')
 parser.add_argument('--k', type=int, default=2, help='Number of Propagation')
-parser.add_argument('--n_pool', type=int, default=2, help='Number of Hierarchical Clustering layers')
+parser.add_argument('--n_pool', type=int, default=4, help='Number of Hierarchical Clustering layers')
 parser.add_argument('--mlp_cluster', type=int, default=2, help='Number of MLP layer in clustering')
 parser.add_argument('--mlp_out', type=int, default=3, help='Number of MLP layer')
 parser.add_argument('--n_hidden', type=int, default=64, help='Number of hidden units')

@@ -15,7 +15,7 @@ def normalize_adj(adj, symmetric=True):
         norm_adj = torch.sparse.mm(torch.sparse.mm(degree_, adj), degree_)
     else:
         degree_ = sparse_diag(degree.pow(-1))
-        norm_adj = torch.sparse.mm(degree_, adj)
+        norm_adj = torch.sparse.mm(adj, degree_)
 
     return norm_adj
 
