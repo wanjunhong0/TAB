@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from layers import Propagation, MLP, ClusteringLayer
-from utils import normalize_adj
+from utils import normalize_adj, sparse_diag
 
 
 class GraphCAD(torch.nn.Module):
@@ -55,20 +55,21 @@ class GraphCAD(torch.nn.Module):
             corrs.append(corr)
             masks.append(mask)
 
-        masks.append(torch.ones(1, 1).to_sparse())
+        # masks.append(torch.ones(1, 1).to_sparse())
         corrs.append(torch.corrcoef(x.T).sum(1))
         
         # Allocation
         gains = []
-        m_adjs = []
-        for i in reversed(range(self.n_pool)):
+        for i in range(self.n_pool):
             gain = corrs[i+1] - torch.sparse.mm(normalize_adj(masks[i], symmetric=False).transpose(0, 1), corrs[i])
             gain = F.sigmoid(gain)
             gains.append(gain)
-            mask = torch.sparse.mm(masks[i], masks[i+1])
-            for j in range(self.n_feature):
-                split = 
 
+        m_adjs = []
+        for j in range(self.n_feature):
+            for i in reversed(range(self.n_pool)):
+                mask = torch.sparse.mm(masks[i], sparse_diag(gains[i][:, j]))
+                for 
 
 
 
