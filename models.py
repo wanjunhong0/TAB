@@ -62,17 +62,18 @@ class GraphCAD(torch.nn.Module):
         gains = []
         for i in range(self.n_pool):
             gain = corrs[i+1] - torch.sparse.mm(normalize_adj(masks[i], symmetric=False).transpose(0, 1), corrs[i])
-            gain = F.sigmoid(gain)
+            gain = torch.sigmoid(gain)
             gains.append(gain)
+        for i in range(1, self.n_pool):
+            masks[i] = torch.sparse.mm(masks[i - 1], masks[i])
 
         adjs = []
         for j in range(self.n_feature):
             temp = []
-            for i in reversed(range(self.n_pool - 1)):
+            for i in range(self.n_pool - 1):
                 mask = torch.sparse.mm(masks[i], sparse_diag(gains[i][:, j]))
-                for k in reversed(range(i)):
-                    mask = torch.sparse.mm(masks[k], mask)
-                mask = torch.sparse.mm(mask, mask.transpose(0, 1))
+                mask = torch.sparse.mm(mask, masks[i].transpose(0, 1))
+
                 adj = torch.mul(adj, mask)
                 temp.append(adj)
             temp = torch.stack(temp)
