@@ -5,7 +5,7 @@ from utils import normalize_adj, sparse_diag
 
 
 class GraphCAD(torch.nn.Module):
-    def __init__(self, args, n_sample, n_feature, n_class):
+    def __init__(self, args, n_sample, n_feature, n_class, feature_corr):
         """
         Args:
             n_layer (int): the number of layer
@@ -16,10 +16,11 @@ class GraphCAD(torch.nn.Module):
         """
         super(GraphCAD, self).__init__()
 
+        self.feature_corr = feature_corr
         self.n_feature = n_feature
         self.k = args.k
         self.n_pool = args.n_pool
-        node_pool = round(pow(n_sample, 1 / (self.n_pool)))
+        node_pool = round(pow(n_sample, 1 / (self.n_pool)))   # + 1 avoid calculating last layer
         self.dropout = args.dropout
         self.prop = Propagation(alpha=0.)
 
@@ -55,14 +56,14 @@ class GraphCAD(torch.nn.Module):
             corrs.append(corr)
             masks.append(mask)
 
-        # masks.append(torch.ones(1, 1).to_sparse())
-        corrs.append(torch.corrcoef(x.T).sum(1))
+        # masks.append((1, 1).to_sparse())
+        corrs.append(self.feature_corr)
         
         # Allocation
         gains = []
-        for i in range(self.n_pool):
-            gain = corrs[i+1] - torch.sparse.mm(normalize_adj(masks[i], symmetric=False).transpose(0, 1), corrs[i])
-            gain = torch.sigmoid(gain)
+        for i in range(1, self.n_pool):
+            gain = torch.sparse.mm(masks[i], corrs[i+1]) - corrs[i]
+            gain = 2 * torch.sigmoid(gain)
             gains.append(gain)
         for i in range(1, self.n_pool):
             masks[i] = torch.sparse.mm(masks[i - 1], masks[i])

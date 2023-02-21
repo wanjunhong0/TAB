@@ -21,7 +21,7 @@ parser.add_argument('--epoch', type=int, default=1000, help='Number of epochs to
 parser.add_argument('--lr', type=float, default=0.01, help='Initial learning rate')
 parser.add_argument('--weight_decay', type=float, default=0, help='Weight decay (L2 norm on parameters)')
 parser.add_argument('--k', type=int, default=2, help='Number of Propagation')
-parser.add_argument('--n_pool', type=int, default=4, help='Number of Hierarchical Clustering layers')
+parser.add_argument('--n_pool', type=int, default=3, help='Number of Hierarchical Clustering layers')
 parser.add_argument('--mlp_cluster', type=int, default=2, help='Number of MLP layer in clustering')
 parser.add_argument('--mlp_out', type=int, default=3, help='Number of MLP layer')
 parser.add_argument('--n_hidden', type=int, default=64, help='Number of hidden units')
@@ -43,6 +43,7 @@ data = Data(path=args.dataset_path, dataset=args.dataset)
 print('Loaded {0} dataset with {1} nodes and {2} edges'.format(args.dataset, data.n_node, data.n_edge))
 feature = data.feature.to(device)
 feature_cov = data.feature_cov.to(device)
+feature_corr = data.feature_corr.to(device)
 adj = data.adj.to(device)
 norm_adj = data.norm_adj.to(device)
 label = data.label.to(device)
@@ -52,7 +53,7 @@ Training
 ===========================================================================
 """
 # Model and optimizer
-model = GraphCAD(args=args, n_sample=data.n_node, n_feature=data.n_feature, n_class=data.n_class).to(device)
+model = GraphCAD(args=args, n_sample=data.n_node, n_feature=data.n_feature, n_class=data.n_class, feature_corr=feature_corr).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 metric = torchmetrics.Accuracy(task='multiclass', num_classes=data.n_class).to(device)
 
