@@ -19,7 +19,7 @@ class Data():
         self.feature = torch.tensor(pd.read_csv(path + dataset + '/X.csv').values, dtype=torch.float).nan_to_num()
         self.n_feature = self.feature.shape[1]
         self.feature_cov = covariance_transform(self.feature)
-        self.feature_corr = torch.corrcoef(self.feature.T).abs().sum(1).reshape(1, -1)
+        self.feature_corr = torch.corrcoef(self.feature.T).abs().mean(1).reshape(1, -1)
         
         self.label = torch.tensor(pd.read_csv(path + dataset + '/y.csv').values, dtype=torch.int64).squeeze(1)
         self.n_class = len(self.label.unique())
@@ -38,4 +38,4 @@ class Data():
         self.n_edge = graph.num_edges
         self.adj = torch.sparse_coo_tensor(self.edge_index, torch.ones(self.n_edge), [self.n_node, self.n_node])
         self.adj = torch.add(self.adj, sparse_diag(torch.ones(self.n_node))).coalesce()
-        self.norm_adj = normalize_adj(self.adj, symmetric=True)
+        # self.norm_adj = normalize_adj(self.adj, symmetric=True)

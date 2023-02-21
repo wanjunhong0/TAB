@@ -35,7 +35,7 @@ class GraphCAD(torch.nn.Module):
 
 
 
-    def forward(self, x, x_cov, adj, norm_adj):
+    def forward(self, x, x_cov, adj):
         """
         Args:
             feature (torch Tensor): feature input
@@ -51,13 +51,19 @@ class GraphCAD(torch.nn.Module):
         masks = []
         corrs = []
         mask = adj
+        loss = 0.
         for i in range(self.n_pool):
             x_cov, corr, mask = self.pools[i](x_cov, mask)
             corrs.append(corr)
             masks.append(mask)
+            # clustering loss
+            loss += corr.mean(0)
+        loss = loss.mean()
 
         # masks.append((1, 1).to_sparse())
         corrs.append(self.feature_corr)
+
+
         
         # Allocation
         gains = []
@@ -71,13 +77,19 @@ class GraphCAD(torch.nn.Module):
             masks[i] = torch.sparse.mm(masks[i - 1], masks[i])
 
         adjs = []
+
+        # for j in range(self.n_feature):
+        #     adjs.append(torch.sparse.softmax(adj, dim=1))
+
         for j in range(self.n_feature):
             temp = [adj]
             for i in range(len(gains)):
                 mask = torch.sparse.mm(masks[i], sparse_diag(gains[i][:,j]))
-                temp.append(torch.mul(torch.sparse.mm(mask, mask.transpose(0, 1)), adj))
+                mask_ = torch.sparse.mm(mask, mask.transpose(0, 1))
+                temp.append(torch.mul(mask_, adj))
             temp = torch.sparse.sum(torch.stack(temp, dim=0),dim=0)
-            adjs.append(torch.sparse.softmax(temp, dim=1))
+            temp = torch.sparse.softmax(temp, dim=1)
+            adjs.append(temp)
 
 
         # GNN 
@@ -86,4 +98,4 @@ class GraphCAD(torch.nn.Module):
 
         x = self.mlp(x)
 
-        return F.log_softmax(x, dim=1)
+        return F.log_softmax(x, dim=1), loss
