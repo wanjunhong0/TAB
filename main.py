@@ -31,7 +31,7 @@ for arg in vars(args):
     print('{0} = {1}'.format(arg, getattr(args, arg)))
 torch.manual_seed(args.seed)
 # training on the first GPU if not available on CPU
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 print('Training on device = {}'.format(device))
 
 """
@@ -56,6 +56,10 @@ Training
 model = GraphCAD(args=args, n_sample=data.n_node, n_feature=data.n_feature, n_class=data.n_class, feature_corr=feature_corr).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 metric = torchmetrics.Accuracy(task='multiclass', num_classes=data.n_class).to(device)
+
+
+torch.autograd.set_detect_anomaly(True)
+
 
 for epoch in range(1, args.epoch+1):
     t = time.time()

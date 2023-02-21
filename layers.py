@@ -16,7 +16,7 @@ class Propagation(torch.nn.Module):
         self.alpha = alpha
 
 
-    def forward(self, x, adj, h):
+    def forward(self, x, adjs, h):
         """
         Args:
             x (torch tensor): H Hiddens
@@ -32,7 +32,7 @@ class Propagation(torch.nn.Module):
 
         xs = []
         for i in range(x.shape[1]):
-            xs.append(torch.sparse.mm(adj, x[:, i].reshape(-1, 1)))
+            xs.append(torch.sparse.mm(adjs[i], x[:, i].reshape(-1, 1)))
         output = torch.cat(xs, dim=1)
 
         return (1 - self.alpha) * output + self.alpha * h

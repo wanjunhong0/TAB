@@ -65,29 +65,24 @@ class GraphCAD(torch.nn.Module):
             gain = torch.sparse.mm(masks[i], corrs[i+1]) - corrs[i]
             gain = 2 * torch.sigmoid(gain)
             gains.append(gain)
-        for i in range(1, self.n_pool):
+
+    
+        for i in range(1, self.n_pool-1):
             masks[i] = torch.sparse.mm(masks[i - 1], masks[i])
 
         adjs = []
         for j in range(self.n_feature):
-            temp = []
-            for i in range(self.n_pool - 1):
-                mask = torch.sparse.mm(masks[i], sparse_diag(gains[i][:, j]))
-                mask = torch.sparse.mm(mask, masks[i].transpose(0, 1))
-
-                adj = torch.mul(adj, mask)
-                temp.append(adj)
-            temp = torch.stack(temp)
-            adjs.append(torch.sparse.sum(temp, dim=0))
-
-
-
-
+            temp = [adj]
+            for i in range(len(gains)):
+                mask = torch.sparse.mm(masks[i], sparse_diag(gains[i][:,j]))
+                temp.append(torch.mul(torch.sparse.mm(mask, mask.transpose(0, 1)), adj))
+            temp = torch.sparse.sum(torch.stack(temp, dim=0),dim=0)
+            adjs.append(torch.sparse.softmax(temp, dim=1))
 
 
         # GNN 
         for i in range(self.k):
-            x = self.prop(x, norm_adj, x0)
+            x = self.prop(x, adjs, x0)
 
         x = self.mlp(x)
 
