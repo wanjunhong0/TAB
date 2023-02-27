@@ -1,4 +1,5 @@
 import torch
+from torch_geometric.utils import subgraph
 
 
 def normalize_adj(adj, symmetric=True):
@@ -45,3 +46,31 @@ def covariance_transform(x):
     covs = torch.stack(covs, dim=0).reshape(n, -1)     # n * d * d --> n * d^2
 
     return covs
+
+
+# def mask_select(mask, value, x):
+#     xs = []
+#     for i in range(mask.size()[1]):
+#         mask_ = sparse_diag(mask.transpose(0, 1)[i] * value[i])
+#         x_select = torch.sparse.mm(x, mask_)
+#         x_select = torch.sparse.mm(x_select.transpose(0, 1), mask_)
+#         xs.append(x_select)
+#     xs = torch.sparse.sum(torch.stack(xs, dim=0),dim=0)
+
+#     return xs
+
+
+def mask_select(mask, value, x):
+    x_indices = []
+    x_values = []
+    for i in range(mask.size()[1]):
+        index = mask.transpose(0, 1)[i].coalesce().indices()
+        x_index, x_value = subgraph(index, x.indices(), x.values())
+        x_indices.append(x_index)
+        x_values.append(x_value * value[i])
+
+    x_indices = torch.cat(x_indices, dim=1)
+    x_values = torch.cat(x_values)
+    x_select = torch.sparse_coo_tensor(x_indices, x_values, x.size())
+
+    return x_select

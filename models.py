@@ -1,10 +1,10 @@
 import torch
 import torch.nn.functional as F
 from layers import Propagation, MLP, ClusteringLayer
-from utils import normalize_adj, sparse_diag
+from utils import normalize_adj, sparse_diag, mask_select
 
 
-class GraphCAD(torch.nn.Module):
+class GraphFADE(torch.nn.Module):
     def __init__(self, args, n_sample, n_feature, n_class, feature_corr):
         """
         Args:
@@ -14,7 +14,7 @@ class GraphCAD(torch.nn.Module):
             n_class (int): the number of classification label
             dropout (float): dropout rate
         """
-        super(GraphCAD, self).__init__()
+        super(GraphFADE, self).__init__()
 
         self.feature_corr = feature_corr
         self.n_feature = n_feature
@@ -84,9 +84,10 @@ class GraphCAD(torch.nn.Module):
         for j in range(self.n_feature):
             temp = [adj]
             for i in range(len(gains)):
-                mask = torch.sparse.mm(masks[i], sparse_diag(gains[i][:,j]))
-                mask_ = torch.sparse.mm(mask, mask.transpose(0, 1))
-                temp.append(torch.mul(mask_, adj))
+                # mask = torch.sparse.mm(masks[i], sparse_diag(gains[i][:,j]))
+                # mask_ = torch.sparse.mm(mask, mask.transpose(0, 1)).coalesce()
+                # temp.append(mask_ * adj)
+                temp.append(mask_select(masks[i], gains[i][:,j], adj))
             temp = torch.sparse.sum(torch.stack(temp, dim=0),dim=0)
             temp = torch.sparse.softmax(temp, dim=1)
             adjs.append(temp)
