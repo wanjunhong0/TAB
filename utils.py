@@ -38,33 +38,35 @@ def sparse_diag(vector):
 
 def covariance_transform(x):
     n = x.shape[0]
-    x_bar = x.mean(dim=0)
-    covs = []
-    for i in range(n):
-        x_ = (x[i] - x_bar).reshape(-1, 1)
-        covs.append(torch.mm(x_, x_.T) * (1 / (n - 1)))
-    covs = torch.stack(covs, dim=0).reshape(n, -1)     # n * d * d --> n * d^2
+
+    # x_bar = x.mean(dim=0)
+    # covs = []
+    # for i in range(n):
+    #     x_ = (x[i] - x_bar).reshape(-1, 1)
+    #     covs.append(torch.mm(x_, x_.T) * (1 / (n - 1)))
+    # covs = torch.stack(covs, dim=0).reshape(n, -1)     # n * d * d --> n * d^2
+
+    covs = torch.bmm(x.reshape(n, -1, 1), x.reshape(n, 1, -1))
 
     return covs
 
+def correlation_readout(x_cov):
+    n = x_cov.shape[0]
+    print('cov: [{}, {}]'.format(x_cov.abs().min(), x_cov.max()))
+    var = (torch.diagonal(x_cov, dim1=1, dim2=2) + 1e-5).pow(-0.5)
+    print('var: [{}, {}]'.format(var.abs().min(), var.max()))
+    x_corr = x_cov * var.reshape(n, 1, -1) * var.reshape(n, -1, 1)
+    
+    print('corr: [{}, {}]'.format(x_corr.abs().min(), x_corr.max()))
 
-# def mask_select(mask, value, x):
-#     xs = []
-#     for i in range(mask.size()[1]):
-#         mask_ = sparse_diag(mask.transpose(0, 1)[i] * value[i])
-#         x_select = torch.sparse.mm(x, mask_)
-#         x_select = torch.sparse.mm(x_select.transpose(0, 1), mask_)
-#         xs.append(x_select)
-#     xs = torch.sparse.sum(torch.stack(xs, dim=0),dim=0)
-
-#     return xs
+    return x_corr.abs().mean(2)
 
 
 def mask_select(mask, value, x):
     x_indices = []
     x_values = []
     for i in range(mask.size()[1]):
-        index = mask.transpose(0, 1)[i].coalesce().indices()
+        index = mask.transpose(0, 1)[i].coalesce().indices()[0]
         x_index, x_value = subgraph(index, x.indices(), x.values())
         x_indices.append(x_index)
         x_values.append(x_value * value[i])

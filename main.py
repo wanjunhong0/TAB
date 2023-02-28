@@ -15,7 +15,7 @@ Configuation
 """
 parser = argparse.ArgumentParser(description="Run GraphFADE.")
 parser.add_argument('--dataset_path', nargs='?', default='./datasets/', help='Input data path')
-parser.add_argument('--dataset', nargs='?', default='house_class', help='Choose a dataset from {house_class, vk_class}')
+parser.add_argument('--dataset', nargs='?', default='avazu', help='Choose a dataset from {house_class, vk_class, avazu}')
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--epoch', type=int, default=1000, help='Number of epochs to train')
 parser.add_argument('--lr', type=float, default=0.01, help='Initial learning rate')
@@ -55,7 +55,8 @@ Training
 # Model and optimizer
 model = GraphFADE(args=args, n_sample=data.n_node, n_feature=data.n_feature, n_class=data.n_class, feature_corr=feature_corr).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-metric = torchmetrics.Accuracy(task='multiclass', num_classes=data.n_class).to(device)
+if data.task == 'classification':
+    metric = torchmetrics.Accuracy(task='multiclass', num_classes=data.n_class).to(device)
 
 
 torch.autograd.set_detect_anomaly(True)
@@ -67,16 +68,24 @@ for epoch in range(1, args.epoch+1):
     model.train()
     optimizer.zero_grad()
     output, loss = model(feature, feature_cov, adj)
-    loss_train = F.nll_loss(output[data.idx_train], label[data.idx_train]) + loss
-    acc_train = metric(output[data.idx_train].max(1)[1], label[data.idx_train])
+    if data.task == 'classification':
+        loss_train = F.nll_loss(output[data.idx_train], label[data.idx_train]) + loss
+        acc_train = metric(output[data.idx_train].max(1)[1], label[data.idx_train])
+    if data.task == 'regression':
+        loss_train = F.mse_loss(output[data.idx_train], label[data.idx_train]) + loss
+        acc_train = loss_train
     loss_train.backward()
     optimizer.step()
 
     # Validation
     model.eval()
     output, loss = model(feature, feature_cov, adj)
-    loss_val = F.nll_loss(output[data.idx_val], label[data.idx_val]) + loss
-    acc_val = metric(output[data.idx_val].max(1)[1], label[data.idx_val])
+    if data.task == 'classification':
+        loss_val = F.nll_loss(output[data.idx_val], label[data.idx_val]) + loss
+        acc_val = metric(output[data.idx_val].max(1)[1], label[data.idx_val])
+    if data.task == 'regression':
+        loss_val = F.mse_loss(output[data.idx_val], label[data.idx_val]) + loss
+        acc_val = loss_val
 
     print('Epoch {0:04d} | Time: {1:.2f}s | Loss = [train: {2:.4f}, val: {3:.4f}] | ACC = [train: {4:.4f}, val: {5:.4f}]'
           .format(epoch, time.time() - t, loss_train, loss_val, acc_train, acc_val))

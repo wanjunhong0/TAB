@@ -3,7 +3,8 @@ import networkx as nx
 import json
 import torch
 from torch_geometric.utils import from_networkx
-from utils import normalize_adj, sparse_diag, covariance_transform
+import torch.nn.functional as F
+from utils import normalize_adj, sparse_diag, covariance_transform, correlation_readout
 
 
 class Data():
@@ -15,16 +16,28 @@ class Data():
             path (str): file path
             dataset (str): dataset name
         """
-        
-        self.feature = torch.tensor(pd.read_csv(path + dataset + '/X.csv').values, dtype=torch.float).nan_to_num()
+        feature = pd.read_csv(path + dataset + '/X.csv').values
+        self.feature = torch.tensor(feature, dtype=torch.float).nan_to_num()
+        # normalization
+        # self.feature = F.normalize(self.feature, p=1, dim=1)
+        self.feature = (self.feature - self.feature.mean(dim=1, keepdim=True)) / self.feature.std(dim=1, keepdim=True)
         self.n_feature = self.feature.shape[1]
-        self.feature_cov = covariance_transform(self.feature)
-        self.feature_corr = torch.corrcoef(self.feature.T).abs().mean(1).reshape(1, -1)
-        
-        self.label = torch.tensor(pd.read_csv(path + dataset + '/y.csv').values, dtype=torch.int64).squeeze(1)
-        self.n_class = len(self.label.unique())
+        self.feature_cov = covariance_transform(self.feature)  # n * d * d
+        self.feature_corr = correlation_readout(self.feature_cov.sum(0, keepdim=True))
 
-        with open('datasets/house_class/masks.json') as f:
+        label = pd.read_csv(path + dataset + '/y.csv').values
+        
+        if dataset in ['house_class', 'vk_class']:
+            self.task = 'classification'
+            self.label = torch.tensor(label, dtype=torch.long).squeeze(1)
+            self.n_class = len(self.label.unique())
+        if dataset in ['avazu', 'house', 'county', 'vk']:
+            self.task = 'regression'
+            self.label = torch.tensor(label, dtype=torch.float)
+            self.n_class = 1
+
+
+        with open(path + dataset + '/masks.json') as f:
             masks = json.load(f)
         self.idx_train = masks['0']['train']
         self.idx_val = masks['0']['val']

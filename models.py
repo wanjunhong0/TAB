@@ -84,10 +84,10 @@ class GraphFADE(torch.nn.Module):
         for j in range(self.n_feature):
             temp = [adj]
             for i in range(len(gains)):
-                # mask = torch.sparse.mm(masks[i], sparse_diag(gains[i][:,j]))
-                # mask_ = torch.sparse.mm(mask, mask.transpose(0, 1)).coalesce()
-                # temp.append(mask_ * adj)
-                temp.append(mask_select(masks[i], gains[i][:,j], adj))
+                mask = torch.sparse.mm(masks[i], sparse_diag(gains[i][:,j]))
+                mask_ = torch.sparse.mm(mask, mask.transpose(0, 1)).coalesce().to_dense()
+                temp.append(mask_.sparse_mask(adj))
+                # temp.append(mask_select(masks[i], gains[i][:,j], adj))
             temp = torch.sparse.sum(torch.stack(temp, dim=0),dim=0)
             temp = torch.sparse.softmax(temp, dim=1)
             adjs.append(temp)
@@ -98,5 +98,8 @@ class GraphFADE(torch.nn.Module):
             x = self.prop(x, adjs, x0)
 
         x = self.mlp(x)
+
+        # print(x.isnan().any())
+        # print(x.isinf().any())
 
         return F.log_softmax(x, dim=1), loss
