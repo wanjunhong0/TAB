@@ -31,7 +31,7 @@ for arg in vars(args):
     print('{0} = {1}'.format(arg, getattr(args, arg)))
 torch.manual_seed(args.seed)
 # training on the first GPU if not available on CPU
-device = torch.device("cuda")
+device = torch.device("cpu")
 print('Training on device = {}'.format(device))
 
 """
@@ -97,7 +97,11 @@ Testing
 """
 model.eval()
 output, loss = model(feature, feature_cov, adj)
-loss_test = F.nll_loss(output[data.idx_test], label[data.idx_test]) + loss
-acc_test = metric(output[data.idx_test].max(1)[1], label[data.idx_test])
+if data.task == 'classification':
+    loss_test = F.nll_loss(output[data.idx_test], label[data.idx_test]) + loss
+    acc_test = metric(output[data.idx_test].max(1)[1], label[data.idx_test])
+if data.task == 'regression':
+    loss_test = F.mse_loss(output[data.idx_test], label[data.idx_test]) + loss
+    acc_test = loss_test
 print('======================Testing======================')
 print('Loss = [test: {0:.4f}] | ACC = [test: {1:.4f}]'.format(loss_test, acc_test))
