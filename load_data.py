@@ -24,6 +24,9 @@ class Data():
         self.n_feature = self.feature.shape[1]
         self.feature_cov = covariance_transform(self.feature)  # n * d * d
         self.feature_corr = correlation_readout(self.feature_cov.sum(0, keepdim=True))
+        # print('f_corr: [{}, {}]'.format(self.feature_corr.abs().min(), self.feature_corr.max()))
+        # corr = (torch.corrcoef(self.feature.T) - torch.eye(self.n_feature)).abs().mean(0)
+        # print('f_corr: [{}, {}]'.format(corr.abs().min(), corr.max()))
 
         label = pd.read_csv(path + dataset + '/y.csv').values
         
@@ -40,7 +43,7 @@ class Data():
         with open(path + dataset + '/masks.json') as f:
             masks = json.load(f)
         self.idx_train = masks['0']['train']
-        self.idx_val = masks['0']['val']
+        self.idx_val = masks['0']['test']
         self.idx_test = masks['0']['test']
 
         G = nx.read_graphml(path + dataset + '/graph.graphml', node_type=int)

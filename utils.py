@@ -45,21 +45,22 @@ def covariance_transform(x):
     #     x_ = (x[i] - x_bar).reshape(-1, 1)
     #     covs.append(torch.mm(x_, x_.T) * (1 / (n - 1)))
     # covs = torch.stack(covs, dim=0).reshape(n, -1)     # n * d * d --> n * d^2
-
+    
     covs = torch.bmm(x.reshape(n, -1, 1), x.reshape(n, 1, -1))
 
     return covs
 
-def correlation_readout(x_cov):
-    n = x_cov.shape[0]
-    print('cov: [{}, {}]'.format(x_cov.abs().min(), x_cov.max()))
-    var = (torch.diagonal(x_cov, dim1=1, dim2=2) + 1e-5).pow(-0.5)
-    print('var: [{}, {}]'.format(var.abs().min(), var.max()))
-    x_corr = x_cov * var.reshape(n, 1, -1) * var.reshape(n, -1, 1)
+def correlation_readout(cov):
+    n = cov.shape[0]
+    var = (torch.diagonal(cov, dim1=1, dim2=2) + 1e-7).pow(-0.5)
+    corr = cov * var.reshape(n, 1, -1) * var.reshape(n, -1, 1)
+    corr = corr - torch.diagonal(corr, dim1=1, dim2=2).diag_embed()  # remove diag values
     
-    print('corr: [{}, {}]'.format(x_corr.abs().min(), x_corr.max()))
+    # print('cov: [{}, {}]'.format(cov.abs().min(), cov.max()))
+    # print('var: [{}, {}]'.format(var.abs().min(), var.max()))
+    # print('corr: [{}, {}]'.format(corr.abs().min(), corr.max()))
 
-    return x_corr.abs().mean(2)
+    return corr.abs().mean(2)
 
 
 def mask_select(mask, value, x):
