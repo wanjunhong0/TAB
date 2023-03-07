@@ -19,15 +19,15 @@ class GraphFADE(torch.nn.Module):
         self.feature_corr = feature_corr
         self.n_feature = n_feature
         self.k = args.k
-        self.n_pool = args.n_pool
-        node_pool = round(pow(n_sample, 1 / (self.n_pool)))   
+        self.n_pool = args.n_pool    # add initial 0th pooling 
+        node_pool = round(pow(n_sample, 1 / (args.n_pool)))   
         self.dropout = args.dropout
         self.prop = Propagation(alpha=1.)
 
         self.bn0 = torch.nn.BatchNorm1d(n_feature)
         self.pools = torch.nn.ModuleList()
         n_centroid = n_sample
-        for _ in range(args.n_pool):
+        for _ in range(self.n_pool):
             n_centroid = round(n_centroid / node_pool)
             self.pools.append(ClusteringLayer(n_feature, args.n_hidden, n_centroid))
 
@@ -57,10 +57,9 @@ class GraphFADE(torch.nn.Module):
             corrs.append(corr)
             masks.append(mask)
             # clustering loss
-            loss += corr.mean(0)
-        loss = loss.mean()
-
-        # masks.append((1, 1).to_sparse())
+            if i > 0:
+                loss += corr.mean(0)
+        loss = loss.mean() / (self.n_pool - 1)
         corrs.append(self.feature_corr)
 
 
