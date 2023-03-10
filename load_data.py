@@ -24,10 +24,6 @@ class Data():
         self.n_feature = self.feature.shape[1]
         self.feature_cov = covariance_transform(self.feature)  # n * d * d
         self.feature_corr = correlation_readout(self.feature_cov.sum(0, keepdim=True))
-        # print('f_corr: [{}, {}]'.format(self.feature_corr.abs().min(), self.feature_corr.max()))
-        # corr = (torch.corrcoef(self.feature.T) - torch.eye(self.n_feature)).abs().mean(0)
-        # print('f_corr: [{}, {}]'.format(corr.abs().min(), corr.max()))
-
         label = pd.read_csv(path + dataset + '/y.csv').values
         
         if dataset in ['house_class', 'vk_class']:
@@ -38,7 +34,6 @@ class Data():
             self.task = 'regression'
             self.label = torch.tensor(label, dtype=torch.float)
             self.n_class = 1
-
 
         with open(path + dataset + '/masks.json') as f:
             masks = json.load(f)
